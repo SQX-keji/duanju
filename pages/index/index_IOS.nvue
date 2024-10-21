@@ -1,0 +1,986 @@
+<template>
+	<view class="detail">
+		<swiper :circular="true" class="swipers" @change="change" :current="current" :vertical="true"
+			:indicator-dots="false" :autoplay="false" :interval="3000" :duration="300">
+			<swiper-item class="swipers-item" v-for="(item,index) in swiperList" :key="item.courseDetailsId">
+				<view class="swipers-items">
+					<!-- 视频 -->
+					<video object-fit="cover" v-if="current === index && item.videoUrl" :play-strategy="2"
+						:show-loading="true" codec="software" :muted="false" :show-center-play-btn="true" :loop="true"
+						@ended="ended" :enable-progress-gesture="false" :poster="item.titleImg"
+						:ref="'myVideo'+item.courseDetailsId" :id="'myVideo'+item.courseDetailsId" :src="item.videoUrl"
+						:autoplay="item.autoPlay" class="swipers-items-video"></video>
+					<image v-else @click="!item.videoUrl?openPay():''" :src="item.titleImg" class="swipers-items-imgsbg"
+						mode="aspectFill">
+					</image>
+					<!-- 返回图标 -->
+					<!-- <image src="../../static/images/index/nvueIcon/backs.png" @click="goBack()" class="swipers-items-back" mode="">
+					</image> -->
+					<!-- 右边操作 -->
+					<view class="swipers-items-right" :style="rightTop">
+						<view class="swipers-items-right-item">
+							<view class="swipers-items-right-item-img" @click.stop="dianzan(item)">
+								<image v-if="item.isGood!=0" class="swipers-items-right-item-imgs"
+									src="../../static/images/index/nvueIcon/myLove_.png" mode=""></image>
+								<image v-else class="swipers-items-right-item-imgs" src="../../static/images/index/nvueIcon/myLove.png"
+									mode=""></image>
+							</view>
+							<view class="swipers-items-right-item-txt">
+								<text class="swipers-items-right-item-txts">
+									{{item.goodNum}}
+								</text>
+							</view>
+						</view>
+						<view class="swipers-items-right-item" @click="share()">
+							<view class="swipers-items-right-item-img">
+								<image class="swipers-items-right-item-imgs" src="../../static/images/index/nvueIcon/share.png"
+									mode=""></image>
+							</view>
+							<view class="swipers-items-right-item-txt">
+								<text class="swipers-items-right-item-txts">
+									分享
+								</text>
+							</view>
+						</view>
+						<view class="swipers-items-right-item" v-if="item.isCollect == 0">
+							<view class="swipers-items-right-item-img" @click.stop="shoucang(item)">
+								<image class="swipers-items-right-item-imgs" src="../../static/images/index/nvueIcon/shuqian.png"
+									mode=""></image>
+							</view>
+							<view class="swipers-items-right-item-txt">
+								<text class="swipers-items-right-item-txts">
+									追剧
+								</text>
+							</view>
+						</view>
+						<view class="swipers-items-right-item" v-else>
+							<view class="swipers-items-right-item-img" @click.stop="shoucang(item)">
+								<image class="swipers-items-right-item-imgs" src="../../static/images/index/nvueIcon/shuqian_s.png"
+									mode=""></image>
+							</view>
+							<view class="swipers-items-right-item-txt">
+								<text class="swipers-items-right-item-txts">
+									已追
+								</text>
+							</view>
+						</view>
+					</view>
+					<!-- 底部视频信息 -->
+					<view class="swipers-items-btom">
+						<view class="swipers-items-btom-box">
+							<!-- 标题 -->
+							<view class="swipers-items-btom-box-title">
+								<text class="swipers-items-btom-box-titles">
+									{{item.courseDetailsName}}
+								</text>
+							</view>
+							<!-- 介绍 -->
+							<view v-if="item.content" class="swipers-items-btom-box-content">
+								<text class="swipers-items-btom-box-contents">{{item.content}}</text>
+							</view>
+							<!-- 集数 -->
+							<view @click="openShow()" class="swipers-items-btom-box-num">
+								<text class="swipers-items-btom-box-nums">
+									第{{item.num}}集（共{{meunList.length}}集）选集 >
+								</text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</swiper-item>
+		</swiper>
+		<!-- 选集弹窗 -->
+		<uni-popup ref="popup" :safe-area="false" background-color="#202020">
+			<view class="list">
+				<view class="list-title">
+					<view class="list-title-l">
+						<image class="list-title-lIcon" src="../../static/images/index/nvueIcon/moreList.png" mode=""></image>
+						<text class="list-title-ls">
+							当前播放第{{num}}个视频
+						</text>
+					</view>
+					<view class="list-title-r" @click="closeList()">
+						<image class="list-title-rs" src="../../static/images/index/nvueIcon/closeIcon.png" mode=""></image>
+					</view>
+				</view>
+				<view class="list-content">
+					<scroll-view :scroll-into-view="scrollIntoViews" :show-scrollbar="true" scroll-y="true"
+						class="list-contents">
+						<view :id="item.viewInfo" @click="selectPlay(item)" class="list-content-item"
+							v-for="(item,index) in meunList" :key="index">
+							<view class="list-content-item-l">
+								<image class="list-content-item-ls" :src="item.titleImg" mode="aspectFill"></image>
+								<view class="list-content-item-l-c">
+									<view class="list-content-item-l-c-num">
+										<text class="list-content-item-l-c-nums">
+											第{{index+1}}集
+										</text>
+									</view>
+									<view class="list-content-item-l-c-title">
+										<text class="list-content-item-l-c-titles">
+											《{{item.courseDetailsName}}》
+										</text>
+									</view>
+									<view class="list-content-item-l-c-content" v-if="item.content">
+										<text class="list-content-item-l-c-contents">
+											{{item.content}}
+										</text>
+									</view>
+								</view>
+							</view>
+							<view class="list-content-item-r" v-if="('video'+index) == scrollIntoView">
+								<text class="list-content-item-rs">
+									正在播放
+								</text>
+							</view>
+						</view>
+
+					</scroll-view>
+
+				</view>
+			</view>
+		</uni-popup>
+		<!-- 购买弹窗 -->
+		<uni-popup ref="popupPya" :safe-area="false" background-color="#202020">
+			<view class="pay">
+				<view class="list-title">
+					<view class="list-title-l">
+						<image class="list-title-lIcon" src="../../static/images/index/nvueIcon/lock.png" mode=""></image>
+						<text class="list-title-lss">
+							当前视频 没有播放权限
+						</text>
+					</view>
+					<view class="list-title-r" @click="closePay()">
+						<image class="list-title-rs" src="../../static/images/index/nvueIcon/closeIcon.png" mode=""></image>
+					</view>
+				</view>
+				<view class="pay-content">
+					<view class="pay-content-item" @click="payVideo(1)">
+						<text class="pay-content-items">
+							购买整部视频
+						</text>
+					</view>
+					<view class="pay-content-item" @click="payVideo(2)">
+						<text class="pay-content-items">
+							购买单集视频
+						</text>
+					</view>
+					<view class="pay-content-item" @click="goNav('/pages/me/vip/index')" v-if="isVips == '是'">
+						<text class="pay-content-items">
+							开通会员
+						</text>
+					</view>
+
+				</view>
+			</view>
+		</uni-popup>
+	</view>
+</template>
+
+<script>
+	export default {
+		data() {
+			return {
+				isStart: false, //是否开始生成二维码
+				erweima: '',
+				qrCodeData: '',
+				haibaoImg: '',
+				showImg: false,
+				haibaoShow: false,
+				title: '',
+				imgSrc: '',
+				current: 0,
+				maskCustomStyle: {
+					background: 'rgba(0, 0, 0, 0.5)'
+				},
+				show: false,
+				videoList: [],
+				videoContext: null, //记录当前视频的上下文
+				isVIP: false, //是否是vip
+				courseId: '',
+				meunList: [], //菜单
+				meunTop: 37, //返回图标距离顶部的距离
+				num: 1, //当前播放的集数
+				showPay: false, //购买视频的弹窗
+				info: {}, //整部的信息
+				courseDetailsId: '', //详情id
+				scrollIntoView: '', //当前播放视频的位置
+				scrollIntoViews: 'video0', //当前播放视频的位置
+				isVips: '否', //是否显示会员
+				rightTop: {
+					top: '0rpx'
+				}
+			};
+		},
+		computed: {
+			swiperList() {
+				return this.videoList;
+			}
+		},
+		onHide() {
+			if (this.videoContext) {
+				this.videoContext.stop()
+				this.videoContext = null
+			}
+		},
+		onUnload() {
+			if (this.videoContext) {
+				this.videoContext.stop()
+				this.videoContext = null
+			}
+		},
+		onShow() {
+			this.isVips = uni.getStorageSync('isVips') ? uni.getStorageSync('isVips') : '否'
+			let that = this
+			uni.$on('back', (data) => {
+				if (data.flag == true) {
+					that.showPay = false
+					that.getDataList(that.courseId, that.courseDetailsId, true);
+				}
+			})
+		},
+		onLoad(e) {
+			let that = this
+			//获取设备的高度
+			uni.getSystemInfo({
+				success(res) {
+					//计算右侧操作拦的位置
+					that.rightTop.top = res.screenHeight - (440 / 2) + 'rpx'
+				},
+				fail() {
+					//如果获取屏幕的高度失败，那么位置默认设置为通用高度630rpx
+					that.rightTop.top = '630rpx'
+				}
+			})
+			// 记录跳转过来的视频总id跟单集id
+			if (e.id) {
+				this.courseId = e.id;
+				if (e.courseDetailsId) {
+					this.courseDetailsId = e.courseDetailsId;
+				}
+				this.getDataList(this.courseId, this.courseDetailsId);
+			}
+			that.getDataList()
+		},
+		methods: {
+			ended() {
+				if (this.current == 2) {
+					//拿出当前的courseDetailsId
+					let courseDetailsId = this.videoList[2].courseDetailsId;
+					let indexs = this.meunList.findIndex(item => item.courseDetailsId === courseDetailsId);
+					//记录当前数据在meunList中的下标
+					if (indexs != -1) { //找到了，indexs就是对应下标
+						//先判断meunList数组剩下的元素是否够三条
+						const lengths = (this.meunList.slice(indexs + 1, this.meunList.length)).length;
+						if (lengths >= 3) { //够三条
+							// 因为轮播图开启了首尾衔接,所以在滑动到尾部重新进入第一页之前替换全部数据为之后的三条
+							this.videoList = this.meunList.slice(indexs + 1, indexs + 4);
+						} else { //不够三条
+							let arr = new Array(3);
+							switch (lengths) {
+								//只有一条
+								case 1:
+									//只有一条的时候需要给数组补两条凑够三条，把meunList数组的前两条拿出来补在后面
+									arr[0] = this.meunList[indexs + 1];
+									arr[1] = this.meunList[0];
+									arr[2] = this.meunList[1];
+									this.videoList = arr;
+									break;
+								case 2:
+									//只有二条
+									arr[0] = this.meunList[indexs + 1];
+									arr[1] = this.meunList[indexs + 2];
+									arr[2] = this.meunList[0];
+									this.videoList = arr;
+									break;
+								default:
+									//刚好没有数据了 直接拿meunList的前三条数据
+									this.videoList = this.meunList.slice(0, 3);
+									break;
+							}
+						}
+					}
+					this.$nextTick(() => {
+						this.current = 0
+					})
+
+
+				} else {
+					this.current += 1
+				}
+			},
+			//分享-复制app下载连接
+			share() {
+				let url = uni.getStorageSync('AppUrl')
+				uni.setClipboardData({
+					data: url,
+					success(res) {
+						uni.showToast({
+							title: '已复制下载链接'
+						})
+					}
+				})
+			},
+			//去开通会员
+			goNav(url) {
+				uni.navigateTo({
+					url: url
+				})
+			},
+			/**
+			 * @param {Object} type 类型 
+			 * 1:购买整部视频
+			 * 2:购买单集视频
+			 */
+			payVideo(type) {
+				// 首先生成订单
+				//购买视频的逻辑
+			},
+			//打开购买弹窗
+			openPay() {
+				this.$refs.popupPya.open('bottom')
+			},
+			//关闭购买弹窗
+			closePay() {
+				this.$refs.popupPya.close()
+			},
+			//选择集数后在更新剩下的数据
+			setVideoList(index) {
+				//判断后续是否还有两条视频
+				let lengths = this.meunList.length - (index + 1)
+				//有最少两条
+				if (lengths >= 2) {
+					//直接拿两条赋值进去
+					this.videoList = [...this.videoList, ...this.meunList.slice(index + 1, index + 3)]
+				}
+				//只剩一条数据
+				if (lengths == 1) {
+					//把剩下的一条给放进去
+					this.videoList = [
+						//选中的那条
+						...this.videoList,
+						//身下的一条
+						this.meunList[this.meunList.length - 1],
+						//最后一条则放总数组的第一条
+						this.meunList[0]
+					]
+				}
+				//选择的就是最后一条数据
+				if (lengths == 0) {
+					//后两条拿总数组的前两条就可以了
+					this.videoList = [...this.videoList, ...this.meunList.slice(0, 2)]
+				}
+				//更新视图
+				this.$forceUpdate()
+			},
+			//选择播放
+			selectPlay(item) {
+				// 根据选择的courseDetailsId拿到meunList列表中的相同数据的下标
+				const index = this.meunList.findIndex(menu => menu.courseDetailsId === item.courseDetailsId);
+				this.videoList = [this.meunList[index]]
+				this.current = 0
+				//重新计算一下当前观看的是哪个视频
+				this.comNumVideo()
+				// 把选择的视频的自动播放设置为true
+				this.videoList[this.current].autoPlay = true
+				//让当前选择的视频播放
+				this.startPlay(this.current)
+				//更新视图
+				this.$forceUpdate()
+				//关闭选择弹窗
+				this.closeList()
+				//记录当前播放位置
+				this.scrollIntoView = 'video' + index
+				//插入历史记录
+				this.setHistor(this.videoList[this.current].courseId, this.videoList[this.current]
+					.courseDetailsId)
+				//等视图跟新完了，把之前剩下的数据补进去在$nextTick中处理
+				this.$nextTick(() => {
+					this.setVideoList(index)
+				})
+			},
+			//选集
+			openShow() {
+				this.comNumVideo()
+				this.openList()
+				this.$nextTick(() => {
+					this.scrollIntoViews = this.scrollIntoView
+				})
+
+			},
+			//打开选集弹窗
+			openList() {
+				this.$refs.popup.open('bottom')
+			},
+			//关闭选集弹窗
+			closeList() {
+				this.$refs.popup.close()
+			},
+			//收藏
+			shoucang(item) {
+				//调用收藏书签的接口
+			},
+			//点赞
+			dianzan(item) {
+				// 调用点赞的接口
+			},
+			//swiper上下切换事件
+			change(e) {
+				//拿出当前的swiper索引
+				let current = Number(e.detail.current);
+				// 根据courseDetailsId在meunList中找到这个数据的下标
+				let indexs = -1;
+				//考虑向上滑动的时候
+				if (current == 2 && this.current == 0) {
+					//向上滑到头的时候先拿第一条数据的courseDetailsId
+					let courseDetailsId = this.videoList[0].courseDetailsId;
+					indexs = this.meunList.findIndex(item => item.courseDetailsId === courseDetailsId);
+					if (indexs != -1) { //找到了，indexs就是对应下标
+						//先判断meunList数组剩下的元素是否够三条
+						const lengths = (this.meunList.slice(0, indexs)).length;
+						if (lengths >= 3) { //够三条
+							// 因为轮播图开启了首尾衔接,所以在滑动到尾部重新进入第一页之前替换全部数据为之前的三条
+							//因为slice(str,end)，包含str，不包含end，所以拿三条数据则-3
+							this.videoList = this.meunList.slice(indexs - 3, indexs);
+						} else { //不够三条
+							let arr = new Array(3);
+							switch (lengths) {
+								//只有一条
+								case 1:
+									//只有一条的时候需要给数组补两条凑够三条，把meunList数组的前两条拿出来补在后面
+									arr[2] = this.meunList[indexs - 1]; //把剩下的一条取出来放到要滑动的那一页
+									//因为剩下的数据不够了，则拿meunList末尾的两条数据补齐
+									//第二个用最后一条数据
+									arr[1] = this.meunList[this.meunList.length - 1];
+									//第一个用倒数第二条数据
+									arr[0] = this.meunList[this.meunList.length - 2];
+									//赋值
+									this.videoList = arr;
+									break;
+									//只有二条
+								case 2:
+									//还剩下两条数据的时候
+									//把剩下的倒数第一条取出来放到要滑动的那一页
+									arr[2] = this.meunList[indexs - 1];
+									//把剩下的最后一条放到第二个元素
+									arr[1] = this.meunList[indexs - 2];
+									//最后一个元素则由meunList的最后一条补齐
+									arr[0] = this.meunList[this.meunList.length - 1];
+									//最后赋值
+									this.videoList = arr;
+									break;
+								default:
+									//一条都没有的时候 [1,2,3,4,5,6]
+									//直接把meunList末尾的三条放入数组即可
+									this.videoList = this.meunList.slice(-3);
+									break;
+							}
+						}
+					}
+				}
+				//考虑向下滑动
+				if (current == 0 && this.current == 2) { //是否滑动到第一条，虽然刚进入页面current为0，但是首次不触发
+					//拿出当前的courseDetailsId
+					let courseDetailsId = this.videoList[2].courseDetailsId;
+					indexs = this.meunList.findIndex(item => item.courseDetailsId === courseDetailsId);
+					//记录当前数据在meunList中的下标
+					if (indexs != -1) { //找到了，indexs就是对应下标
+						//先判断meunList数组剩下的元素是否够三条
+						const lengths = (this.meunList.slice(indexs + 1, this.meunList.length)).length;
+						if (lengths >= 3) { //够三条
+							// 因为轮播图开启了首尾衔接,所以在滑动到尾部重新进入第一页之前替换全部数据为之后的三条
+							this.videoList = this.meunList.slice(indexs + 1, indexs + 4);
+						} else { //不够三条
+							let arr = new Array(3);
+							switch (lengths) {
+								//只有一条
+								case 1:
+									//只有一条的时候需要给数组补两条凑够三条，把meunList数组的前两条拿出来补在后面
+									arr[0] = this.meunList[indexs + 1];
+									arr[1] = this.meunList[0];
+									arr[2] = this.meunList[1];
+									this.videoList = arr;
+									break;
+								case 2:
+									//只有二条
+									arr[0] = this.meunList[indexs + 1];
+									arr[1] = this.meunList[indexs + 2];
+									arr[2] = this.meunList[0];
+									this.videoList = arr;
+									break;
+								default:
+									//刚好没有数据了 直接拿meunList的前三条数据
+									this.videoList = this.meunList.slice(0, 3);
+									break;
+							}
+						}
+					}
+				}
+
+				//获取当前播放的视频在菜单数组中的位置
+				let scrollIndex = this.meunList.findIndex(ite => ite.courseDetailsId == this.videoList[current]
+					.courseDetailsId);
+				//记录当前播放位置
+				this.scrollIntoView = 'video' + scrollIndex;
+				//控制播放
+				this.startPlay(current);
+				//设置轮播图索引
+				this.current = current;
+				//插入历史记录
+				this.setHistor(this.videoList[this.current].courseId, this.videoList[this.current].courseDetailsId);
+			},
+			//控制播放
+			startPlay(current) {
+				if (this.videoContext) { //判断之前是否有视频的上下文
+					this.videoContext.stop();
+					this.videoContext = null;
+				}
+				let numIdCurr = this.videoList[current].courseDetailsId;
+				if (this.videoList[current].videoUrl) { //已经购买可直接播放
+					// 播放时记录当前播放的id
+					this.videoContextId = 'myVideo' + numIdCurr;
+					this.videoContext = uni.createVideoContext(this.videoContextId, this);
+					this.$nextTick(() => {
+						//播放当前的
+						this.videoContext.play();
+
+					})
+				} else { //没有视频链接则表示没有权限，需要购买 弹出购买弹窗
+					this.openPay()
+				}
+				this.$forceUpdate();
+			},
+			//返回
+			goBack() {
+				uni.navigateBack();
+			},
+			/**
+			 * @param {Number} courseId 总id
+			 * @param {Number} courseDetailsId 当前视频id
+			 * @param {boolean} type 是购买后返回的还是直接进来的
+			 */
+			getDataList(courseId, courseDetailsId, type) {
+				//以下为测试数据，实际请用接口获取
+				let videoList = [
+					{
+						courseId:1,//视频id
+						courseDetailsId:1,//当前视频id
+						courseDetailsName:'回到古代当太zi4',//视频标题
+						content:'回到古代当太zi4',//视频简介
+						isGood:0,//是否点赞 1:点赞 0:未点赞
+						isCollect:0,//是否追剧 1:已追 0:未追
+						goodNum:1,//点赞数量
+						videoUrl:'https://sdp003.wanshibao.com:49/m3u8/5cfewiWOsb9LUzdXoF8CY_nJ_nYB-TxjUPg8FEnaGwXdEHWmLOzdcwfxYHH9cMAtsiYJ_eP4pBudI9Q.m3u8',//视频播放地址
+						titleImg:'https://sdp003.wanshibao.com:49/m3u8/pic/1a77B6xVZnZRDq-p5qMzR6lGtqvEAqQArAihNz9Ixp-w5lB2qhr1HE6UbwTozBi_8LOhsoevKxw.jpg',//视频封面图片
+					},
+					{
+						courseId:1,//视频id
+						courseDetailsId:2,//当前视频id
+						courseDetailsName:'回到古代当太zi5',//视频标题
+						content:'回到古代当太zi5',//视频简介
+						isGood:0,//是否点赞 1:点赞 0:未点赞
+						isCollect:0,//是否追剧 1:已追 0:未追
+						goodNum:1,//点赞数量
+						videoUrl:'https://sdp003.wanshibao.com:49/m3u8/e3132AbBDNItEc6T23Zo_RveoW5xpWSLYANwcPoJuJ3eFKMwUn9srZ5iW6g_Xw1_c3JcOvIHjD4S2rI.m3u8',//视频播放地址
+						titleImg:'https://sdp003.wanshibao.com:49/m3u8/pic/bed1wbZXz-Gjf4qwoKwmJ0y5L8UkWz65whyMJfJaW0XPwapPPr-z-teVOs4cwjJ2rbqlxo2mUWE.jpg',//视频封面图片
+					},
+					{
+						courseId:1,//视频id
+						courseDetailsId:3,//当前视频id
+						courseDetailsName:'回到古代当太zi6',//视频标题
+						content:'回到古代当太zi6',//视频简介
+						isGood:0,//是否点赞 1:点赞 0:未点赞
+						isCollect:0,//是否追剧 1:已追 0:未追
+						goodNum:1,//点赞数量
+						videoUrl:'https://sdp003.wanshibao.com:49/m3u8/82afKKYJ2yza-iPefiofrJ0A6hcJ8UnJcWLvv9RVGoW3FcNqvG3JmrQZy5l00w6VYcIroikyCxD3lII.m3u8',//视频播放地址
+						titleImg:'https://sdp003.wanshibao.com:49/m3u8/pic/15a5xE-c8eR_k76QA86VgjeHYUCZF_18TvT7QJzLH5HnHvWNlHdmBzIOdWxUj54uY9prCZdXU1o.jpg',//视频封面图片
+					},
+					{
+						courseId:1,//视频id
+						courseDetailsId:4,//当前视频id
+						courseDetailsName:'回到古代当太zi7',//视频标题
+						content:'回到古代当太zi7',//视频简介
+						isGood:0,//是否点赞 1:点赞 0:未点赞
+						isCollect:0,//是否追剧 1:已追 0:未追
+						goodNum:1,//点赞数量
+						videoUrl:'https://sdp003.wanshibao.com:49/m3u8/4333NUZUz_Asi9Bq19Fszc_yUKUWSG2Fj04N7-PDWng3xsm3fk4cCg7dqOTY4D4VBoiP3SC6_ZpJiIo.m3u8',//视频播放地址
+						titleImg:'https://sdp003.wanshibao.com:49/m3u8/pic/ec4epSaxrB3IxB3oe6k4F2THW4nbSyKMZHmACkwvMlNmQQYwp7awyhJt-bB8Xey-2uJl8eDz9Sg.jpg',//视频封面图片
+					}
+				]
+				videoList.map((item,index)=>{
+					item.num = index + 1;
+					if (item.videoUrl) {
+						item.autoPlay = true;
+					} else {
+						item.autoPlay = false;
+					}
+					item.viewInfo = 'video' + index;
+				})
+				//菜单数组
+				this.meunList = videoList
+				if (type == true) { //购买视频后返回的
+					let courseDetailsId = this.videoList[this.current].courseDetailsId;
+					this.meunList.some((item) => {
+						if (item.courseDetailsId == courseDetailsId) {
+							this.videoList[this.current].videoUrl = item.videoUrl;
+						}
+						return true;
+					})
+				} else { //直接跳转进来的
+					let indexs = -1;
+					if (courseDetailsId) { //从记录进来的
+						this.meunList.map((item, index) => {
+							if (item.courseDetailsId == courseDetailsId) {
+								indexs = index;
+							}
+						})
+						if (indexs != -1) { //找到了
+							if (Number(indexs + 1) === this.meunList.length) { //最后一条
+								if (this.meunList.length == 1) { //只有一条
+									this.videoList = this.meunList.slice(0, 3)
+								} else if (this.meunList.length == 2) {
+									this.videoList = this.meunList.slice(0, 3)
+								} else {
+									this.videoList = [
+										this.meunList[this.meunList.length - 1],
+										this.meunList[0],
+										this.meunList[1],
+									]
+								}
+							} else if (Number(indexs) === Number(this.meunList.length - 1)) { //倒数第二条
+								if (this.meunList.length == 1) { //只有一条
+									this.videoList = this.meunList.slice(0, 3)
+								} else if (this.meunList.length == 2) { //有两条的时候
+									this.videoList = [
+										this.meunList[1],
+										this.meunList[0],
+									]
+								} else {
+									this.videoList = [
+										this.meunList[this.meunList.length - 2],
+										this.meunList[this.meunList.length - 1],
+										this.meunList[0],
+									]
+								}
+							} else {
+								//如果不是最后一条，也不是倒数第二条，则从找到的位置开始往后拿三条数据放入数组
+								this.videoList = this.meunList.slice(indexs, indexs + 3);
+							}
+						} else {
+							//没找到直接拿前三条数据即可
+							this.videoList = this.meunList.slice(0, 3);
+						}
+					} else { //新的视频
+						// //视频数组//直接拿前三条
+						this.videoList = this.meunList.slice(0, 3);
+						indexs = 0
+					}
+					//重新计算当前在播放哪个视频
+					this.comNumVideo();
+					if (indexs != -1 && this.meunList.length > 0) {
+						this.$nextTick(() => {
+							this.scrollIntoView = 'video' + indexs;
+						})
+				
+					}
+				}
+				//判断第一个是否可以播放
+				if (this.videoList[0].autoPlay) {
+					let numIdCurr = this.videoList[0].courseDetailsId;
+					this.videoContextId = 'myVideo' + numIdCurr;
+				
+					this.$nextTick(() => {
+						this.videoContext = uni.createVideoContext(this.videoContextId, this);
+						this.videoContext.play();
+					})
+				
+				} else { //不能播放则需要购买
+					this.openPay()
+				}
+				
+				this.$forceUpdate();
+				//插入历史记录
+				this.setHistor(this.videoList[this.current].courseId, this.videoList[this.current]
+					.courseDetailsId);
+				
+			},
+			//计算正在观看哪个视频
+			comNumVideo() {
+				let courseDetailsId = this.videoList[this.current].courseDetailsId;
+				this.meunList.map((item, index) => {
+					if (item.courseDetailsId == courseDetailsId) { //找到了
+						this.num = item.num;
+					}
+				})
+			},
+			//插入观看记录
+			setHistor(courseId, courseDetailsId) {
+				//调用记录观看视频记录接口
+			},
+		}
+	}
+</script>
+
+<style>
+	.detail {
+		width: 750rpx;
+		flex: 1;
+		background-color: #000;
+	}
+
+	.swipers {
+		width: 750rpx;
+		flex: 1;
+	}
+
+	.swipers-item {
+		width: 750rpx;
+		flex: 1;
+	}
+
+	.swipers-items {
+		width: 750rpx;
+		flex: 1;
+		position: relative;
+		background-color: #000;
+	}
+
+	.swipers-items-video {
+		width: 750rpx;
+		flex: 1;
+	}
+
+	.swipers-items-imgsbg {
+		width: 750rpx;
+		flex: 1;
+	}
+
+	.swipers-items-back {
+		position: absolute;
+		left: 40rpx;
+		top: 120rpx;
+		width: 60rpx;
+		height: 60rpx;
+		z-index: 999;
+	}
+
+	.swipers-items-right {
+		position: absolute;
+		width: 60rpx;
+		top: 100rpx;
+		right: 20rpx;
+	}
+
+	.swipers-items-right-item {
+		width: 60rpx;
+		margin-bottom: 40rpx;
+	}
+
+	.swipers-items-right-item-img {
+		width: 60rpx;
+		height: 60rpx;
+	}
+
+	.swipers-items-right-item-imgs {
+		width: 60rpx;
+		height: 60rpx;
+	}
+
+	.swipers-items-right-item-txt {
+		width: 60rpx;
+	}
+
+	.swipers-items-right-item-txts {
+		width: 60rpx;
+		color: #ffffff;
+		font-size: 24rpx;
+		text-align: center;
+	}
+
+	.swipers-items-btom {
+		width: 750rpx;
+		position: absolute;
+		bottom: 100rpx;
+		align-items: center;
+	}
+
+	.swipers-items-btom-box {
+		width: 710rpx;
+	}
+
+	.swipers-items-btom-box-title {
+		width: 710rpx;
+	}
+
+	.swipers-items-btom-box-titles {
+		width: 710rpx;
+		color: #ffffff;
+		font-size: 30rpx;
+	}
+
+	.swipers-items-btom-box-content {
+		width: 710rpx;
+		margin-top: 10rpx;
+	}
+
+	.swipers-items-btom-box-contents {
+		width: 710rpx;
+		color: #ffffff;
+		font-size: 28rpx;
+	}
+
+	.swipers-items-btom-box-num {
+		width: 710rpx;
+		margin-top: 20rpx;
+	}
+
+	.swipers-items-btom-box-nums {
+		color: #ffffff;
+		font-size: 30rpx;
+	}
+
+	/* 选集弹窗 */
+	.list {
+		width: 750rpx;
+		align-items: center;
+		/* background-color: #202020; */
+	}
+
+	.list-title {
+		width: 710rpx;
+		margin-top: 30rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.list-title-l {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.list-title-lIcon {
+		width: 40rpx;
+		height: 40rpx;
+	}
+
+	.list-title-ls {
+		color: #ffffff;
+		font-size: 32rpx;
+		font-weight: bold;
+		margin-left: 30rpx;
+	}
+
+	.list-title-r {
+		width: 40rpx;
+		height: 40rpx;
+	}
+
+	.list-title-rs {
+		width: 40rpx;
+		height: 40rpx;
+	}
+
+	.list-content {
+		width: 710rpx;
+		height: 600rpx;
+		margin-bottom: 40rpx;
+		margin-top: 20rpx;
+	}
+
+	.list-contents {
+		width: 710rpx;
+		height: 600rpx;
+	}
+
+	.list-content-item {
+		width: 710rpx;
+		margin-bottom: 20rpx;
+		flex-direction: row;
+		justify-content: space-between;
+	}
+
+	.list-content-item-rs {
+		font-weight: 400;
+		font-size: 12px;
+		color: #5074ff;
+	}
+
+	.list-content-item-l {
+		flex-direction: row;
+
+	}
+
+	.list-content-item-ls {
+		width: 140rpx;
+		height: 160rpx;
+		border-radius: 10rpx;
+	}
+
+	.list-content-item-l-c {
+		width: 400rpx;
+		margin-left: 20rpx;
+	}
+
+	.list-content-item-l-c-num {}
+
+	.list-content-item-l-c-nums {
+		color: #ffffff;
+		font-size: 32rpx;
+		font-weight: bold;
+	}
+
+	.list-content-item-l-c-title {
+		margin-top: 10rpx;
+	}
+
+	.list-content-item-l-c-titles {
+		color: #ffffff;
+		font-size: 32rpx;
+
+	}
+
+	.list-content-item-l-c-content {
+		margin-top: 10rpx;
+	}
+
+	.list-content-item-l-c-contents {
+		color: #ffffff;
+		font-size: 30rpx;
+	}
+
+	.pay {
+		width: 750rpx;
+		align-items: center;
+	}
+
+	.list-title-lss {
+		color: #ffffff;
+		font-size: 32rpx;
+		font-weight: bold;
+		margin-left: 30rpx;
+	}
+
+	.pay-content {
+		width: 710rpx;
+		margin-top: 40rpx;
+		margin-bottom: 40rpx;
+	}
+
+	.pay-content-item {
+		width: 710rpx;
+		height: 92rpx;
+		border-radius: 20rpx;
+		background-color: #ffffff;
+		margin-bottom: 40rpx;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.pay-content-items {
+		color: #000;
+		font-size: 28rpx;
+		font-weight: bold;
+	}
+</style>
